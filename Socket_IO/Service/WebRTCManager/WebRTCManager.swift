@@ -24,6 +24,7 @@ class WebRTCManager: NSObject, ObservableObject{
     private var peerConnection: RTCPeerConnection!
     private let mediaConstrains = [kRTCMediaConstraintsOfferToReceiveAudio: kRTCMediaConstraintsValueTrue,
                                    kRTCMediaConstraintsOfferToReceiveVideo: kRTCMediaConstraintsValueTrue]
+    private var remoteCandidatesQueue: [RTCIceCandidate] = []
 
     
    override init() {
@@ -95,29 +96,41 @@ class WebRTCManager: NSObject, ObservableObject{
     }
     
     func setRemoteDiscriptionForOffer(remoteSdp: String) {
-        let sdpType: RTCSdpType = .offer
-        let sdp = RTCSessionDescription(type: sdpType, sdp: remoteSdp)
-        
-        peerConnection.setRemoteDescription(sdp) { error in
-            if let error = error {
-                print("Error setting remote description: \(error)")
+            let sdp = RTCSessionDescription(type: .offer, sdp: remoteSdp)
+            peerConnection.setRemoteDescription(sdp) { [weak self] error in
+                if error == nil {
+                    self?.drainRemoteCandidatesQueue() 
+                }
             }
         }
-    }
     func setRemoteDiscriptionForAnswer(remoteSdp: String) {
-        let sdpType: RTCSdpType = .answer
-        let sdp = RTCSessionDescription(type: sdpType, sdp: remoteSdp)
-        
-        peerConnection.setRemoteDescription(sdp) { error in
-            if let error = error {
-                print("Error setting remote description: \(error)")
+            let sdp = RTCSessionDescription(type: .answer, sdp: remoteSdp)
+            peerConnection.setRemoteDescription(sdp) { [weak self] error in
+                if error == nil {
+                    self?.drainRemoteCandidatesQueue() // Queue clear karein
+                }
             }
         }
-    }
     
     func set(remoteCandidate: RTCIceCandidate) {
-        peerConnection.add(remoteCandidate)
-    }
+            if peerConnection.remoteDescription != nil {
+                peerConnection.add(remoteCandidate)
+                print("❄️ ICE Candidate added immediately")
+            } else {
+                // Queue mein daal dein agar description abhi set nahi hua
+                remoteCandidatesQueue.append(remoteCandidate)
+                print("⏳ Candidate queued. Waiting for remote description...")
+            }
+        }
+    
+    private func drainRemoteCandidatesQueue() {
+            guard peerConnection.remoteDescription != nil else { return }
+            for candidate in remoteCandidatesQueue {
+                peerConnection.add(candidate)
+            }
+            print("✅ Drained \(remoteCandidatesQueue.count) queued candidates")
+            remoteCandidatesQueue.removeAll()
+        }
     
     
     

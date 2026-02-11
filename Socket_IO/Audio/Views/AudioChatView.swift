@@ -67,13 +67,14 @@ struct callButtonStyle:ViewModifier {
             )
             .onAppear {
                 isBool.toggle()
+              
                
             }
             .alert("Do you want to switch to Audio Call?", isPresented: $isBool) {
                 Button("Confirm", role: .cancel) {
                     viewModel.checkPermissions()
                     viewModel.startLocalAudioCapture()
-               
+
              
                     
                     

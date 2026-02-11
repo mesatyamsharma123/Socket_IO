@@ -20,25 +20,26 @@ class AudioViewModel: ObservableObject {
     
     @Published var remoteAudioTrack: RTCAudioTrack?
     init(socketManager: SocketManagerClient){
-        
         self.socket = socketManager
         self.rtc = WebRTCManager()
         self.socket.delegate = self
         self.rtc.delegate = self
         self.configureAudioSession()
+
+      
     }
     
     func configureAudioSession() {
         let audioSession = AVAudioSession.sharedInstance()
         do {
-            // .defaultToSpeaker options add karein taaki awaaz speaker se aaye
+
             try audioSession.setCategory(.playAndRecord,
                                        mode: .voiceChat,
                                        options: [.defaultToSpeaker, .allowBluetooth])
             try audioSession.setActive(true)
-            print("✅ Audio Session is Active and Mic is ON")
+            print(" Audio Session is Active and Mic is ON")
         } catch {
-            print("❌ couldn't set audio session: \(error)")
+            print(" couldn't set audio session: \(error)")
         }
     }
     
@@ -47,16 +48,18 @@ class AudioViewModel: ObservableObject {
     }
     func startCall(roomId: String){
         self.currentRoomId = roomId
-        print("yeh room",currentRoomId)
-        print("yeh origanal romm id: \(roomId)")
-        rtc.offer { [weak self] (sdp) in
-            guard let self else {return}
-            self.socket.sendOffer(sdp: sdp, usename: "user1",roomId: roomId)
-            
+        
+        // Yahan hum dobara ensure kar rahe hain ki audio capture chalu hai
+        self.startLocalAudioCapture()
+        
+        // 0.2 ya 0.3 second ka delay WebRTC ko track process karne ka waqt deta hai
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.rtc.offer { [weak self] (sdp) in
+                guard let self = self else { return }
+                self.socket.sendOffer(sdp: sdp, usename: "user1", roomId: roomId)
+            }
         }
-        print("Start the call")
-        print("roomId: \(roomId)")
-            
+        print(" Offer sent after ensuring track is attached")
     }
     func checkPermissions() {
         let audioStatus = AVCaptureDevice.authorizationStatus(for: .audio)
@@ -102,11 +105,11 @@ extension AudioViewModel: SocketManagerClientProtocol, WebRTCClientDelegate {
     
     func SocketManagerClientProtocol(_ client: SocketManagerClient, didReceiveRemoteAnswer: String, username: String, roomId: String) {
         rtc.setRemoteDiscriptionForAnswer(remoteSdp: didReceiveRemoteAnswer)
-        rtc.answer { [weak self ] answer in
-            guard let self = self else { return }
-            self.socket.sendAnswer(sdp: answer, usename: username, roomId: roomId)
-            print("received remote answer, room id: \(roomId)")
-        }
+//        rtc.answer { [weak self ] answer in
+//            guard let self = self else { return }
+//            self.socket.sendAnswer(sdp: answer, usename: username, roomId: roomId)
+//            print("received remote answer, room id: \(roomId)")
+//        }
     }
     
     func SocketManagerClientProtocol(_ client: SocketManagerClient, didReceiveRemoteICECandidate candidate: [String : Any], roomId: String) {
@@ -139,6 +142,12 @@ extension AudioViewModel: SocketManagerClientProtocol, WebRTCClientDelegate {
         
           DispatchQueue.main.async {
               self.remoteAudioTrack = track
+              self.remoteAudioTrack?.isEnabled = true
+              let rtcSession = RTCAudioSession.sharedInstance()
+                      rtcSession.lockForConfiguration()
+                      try? rtcSession.overrideOutputAudioPort(.speaker)
+                      try? rtcSession.setActive(true)
+                      rtcSession.unlockForConfiguration()
           }
     }
     
