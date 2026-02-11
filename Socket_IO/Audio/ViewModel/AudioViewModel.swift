@@ -105,6 +105,7 @@ extension AudioViewModel: SocketManagerClientProtocol, WebRTCClientDelegate {
         rtc.answer { [weak self ] answer in
             guard let self = self else { return }
             self.socket.sendAnswer(sdp: answer, usename: username, roomId: roomId)
+            print("received remote answer, room id: \(roomId)")
         }
     }
     

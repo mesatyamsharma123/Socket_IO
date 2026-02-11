@@ -111,12 +111,14 @@ class SocketManagerClient: NSObject, ObservableObject {
         let message: [String: Any] = [
             "username": usename,
             "sdp": sdp,
-            "roomId": roomId  // Pehle yahan shayad error tha
+            "roomId": roomId
         ]
         socket.emit("audio_offer", message)
         print("Offer emitted for room: \(roomId)")
     }
     func sendAnswer(sdp: String, usename: String,roomId:String) {
+        print(roomId)
+        
         let message:[String: Any] = [ "username": usename,"sdp": sdp,roomId:roomId]
         socket.emit("audio_answer", message)
     }
