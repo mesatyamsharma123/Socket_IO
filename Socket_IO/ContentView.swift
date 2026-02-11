@@ -7,10 +7,11 @@ enum ConnectionState {
     case enterRoom
 }
 struct ContentView: View {
-    @StateObject private var socketManager = SocketManagerClient()
-    @State private var state: ConnectionState = .idle
-    @State private var messageText: String = ""
-    @State private var roomID: String = ""
+        @ObservedObject var socketManager: SocketManagerClient
+        
+        @Binding var roomID: String
+        @State private var state: ConnectionState = .idle
+        @State private var messageText: String = ""
 
     var body: some View {
         VStack {
@@ -44,6 +45,14 @@ struct ContentView: View {
                 .padding()
             
             Button("Join Room") {
+                if !roomID.isEmpty {
+                    socketManager.joinRoom(id: roomID)
+                    state = .enterRoom
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!socketManager.isConnected)
+            Button("Create room") {
                 if !roomID.isEmpty {
                     socketManager.joinRoom(id: roomID)
                     state = .enterRoom

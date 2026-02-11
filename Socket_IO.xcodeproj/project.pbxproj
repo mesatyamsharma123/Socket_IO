@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		E6D72FC12F39BD2100E3DE1B /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = E6D72FC02F39BD2100E3DE1B /* SocketIO */; };
+		E6D72FF52F3B443A00E3DE1B /* WebRTC in Frameworks */ = {isa = PBXBuildFile; productRef = E6D72FF42F3B443A00E3DE1B /* WebRTC */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +58,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E6D72FC12F39BD2100E3DE1B /* SocketIO in Frameworks */,
+				E6D72FF52F3B443A00E3DE1B /* WebRTC in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -126,6 +128,7 @@
 			name = Socket_IO;
 			packageProductDependencies = (
 				E6D72FC02F39BD2100E3DE1B /* SocketIO */,
+				E6D72FF42F3B443A00E3DE1B /* WebRTC */,
 			);
 			productName = Socket_IO;
 			productReference = E6D72F922F39BCAD00E3DE1B /* Socket_IO.app */;
@@ -211,6 +214,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				E6D72FBE2F39BD1400E3DE1B /* XCRemoteSwiftPackageReference "socket" */,
+				E6D72FF32F3B441800E3DE1B /* XCRemoteSwiftPackageReference "WebRTC" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E6D72F932F39BCAD00E3DE1B /* Products */;
@@ -412,9 +416,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 5R3969ST9Z;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Socket-IO-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "We need camera access for video calls";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "We need this to connect to the signaling server";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = " We need microphone access for audio calls";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -444,9 +452,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 5R3969ST9Z;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Socket-IO-Info.plist";
+				INFOPLIST_KEY_NSCameraUsageDescription = "We need camera access for video calls";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "We need this to connect to the signaling server";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = " We need microphone access for audio calls";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -599,6 +611,14 @@
 				kind = branch;
 			};
 		};
+		E6D72FF32F3B441800E3DE1B /* XCRemoteSwiftPackageReference "WebRTC" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stasel/WebRTC.git";
+			requirement = {
+				kind = exactVersion;
+				version = 114.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -606,6 +626,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E6D72FBE2F39BD1400E3DE1B /* XCRemoteSwiftPackageReference "socket" */;
 			productName = SocketIO;
+		};
+		E6D72FF42F3B443A00E3DE1B /* WebRTC */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E6D72FF32F3B441800E3DE1B /* XCRemoteSwiftPackageReference "WebRTC" */;
+			productName = WebRTC;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

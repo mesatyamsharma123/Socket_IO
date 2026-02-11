@@ -11,7 +11,8 @@ import SwiftUI
 struct Socket_IOApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            // Ab HomeView ke paas koi bahar ka argument nahi hai
+            HomeView()
         }
     }
 }
