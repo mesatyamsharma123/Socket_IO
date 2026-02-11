@@ -90,6 +90,34 @@ class AudioViewModel: ObservableObject {
 
 
 extension AudioViewModel: SocketManagerClientProtocol, WebRTCClientDelegate {
+    func SocketManagerClientProtocol(_ client: SocketManagerClient, didReceiveRemoteOffer: String, username: String, roomId: String) {
+        rtc.setRemoteDiscriptionForOffer(remoteSdp: didReceiveRemoteOffer)
+        rtc.answer { [weak self ] answer in
+            guard let self else {return}
+            self.socket.sendAnswer(sdp: answer, usename: username,roomId: roomId)
+            
+        }
+    
+    }
+    
+    func SocketManagerClientProtocol(_ client: SocketManagerClient, didReceiveRemoteAnswer: String, username: String, roomId: String) {
+        rtc.setRemoteDiscriptionForAnswer(remoteSdp: didReceiveRemoteAnswer)
+        rtc.answer { [weak self ] answer in
+            guard let self = self else { return }
+            self.socket.sendAnswer(sdp: answer, usename: username, roomId: roomId)
+        }
+    }
+    
+    func SocketManagerClientProtocol(_ client: SocketManagerClient, didReceiveRemoteICECandidate candidate: [String : Any], roomId: String) {
+        guard let sdp = candidate["candidate"] as? String,
+              let sdpMid = candidate["sdpMid"] as? String,
+              let sdpMLineIndex = candidate["sdpMLineIndex"] as? Int32,
+              let roomId = candidate["roomId"] as? String else { return }
+        let iceCandidate = RTCIceCandidate(sdp: sdp, sdpMLineIndex: sdpMLineIndex, sdpMid: sdpMid)
+        rtc.set(remoteCandidate: iceCandidate)
+    }
+    
+
     
     func webRTCClient(_ client: WebRTCManager, didDiscoverLocalCandidate candidate: RTCIceCandidate) {
         let candidateDict: [String: Any] = [
@@ -124,11 +152,7 @@ extension AudioViewModel: SocketManagerClientProtocol, WebRTCClientDelegate {
     }
     
     func SocketManagerClientProtocol(_ client: SocketManagerClient, didReceiveRemoteAnswer: String, username: String) {
-        rtc.setRemoteDiscriptionForAnswer(remoteSdp: didReceiveRemoteAnswer)
-        rtc.answer { [weak self ] answer in
-            guard let self = self else { return }
-            self.socket.sendAnswer(sdp: answer, usename: username, roomId: currentRoomId)
-        }
+        
     }
     
     func SocketManagerClientProtocol(_ client: SocketManagerClient, didReceiveRemoteICECandidate candidate: [String : Any]) {

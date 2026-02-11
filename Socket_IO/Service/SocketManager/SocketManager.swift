@@ -4,9 +4,9 @@ import Combine
 
 
 protocol SocketManagerClientProtocol: AnyObject {
-    func SocketManagerClientProtocol(_ client: SocketManagerClient,didReceiveRemoteOffer: String,username: String)
-    func SocketManagerClientProtocol(_ client: SocketManagerClient,didReceiveRemoteAnswer: String,username: String)
-    func SocketManagerClientProtocol(_ client: SocketManagerClient,didReceiveRemoteICECandidate candidate: [String:Any])
+    func SocketManagerClientProtocol(_ client: SocketManagerClient,didReceiveRemoteOffer: String,username: String,roomId: String)
+    func SocketManagerClientProtocol(_ client: SocketManagerClient,didReceiveRemoteAnswer: String,username: String,roomId: String)
+    func SocketManagerClientProtocol(_ client: SocketManagerClient,didReceiveRemoteICECandidate candidate: [String:Any],roomId: String)
     
 }
 
@@ -129,9 +129,9 @@ class SocketManagerClient: NSObject, ObservableObject {
         socket.on("audio_offer") { [weak self] (data, _) in
             guard let self = self else { return }
             guard let dict = data.first as? [String: Any] else { return }
-            if let username = dict["username"] as? String, let sdp = dict["sdp"] as? String {
-                print("Received offer from: \(username), sdp: \(sdp)")
-                delegate?.SocketManagerClientProtocol(self, didReceiveRemoteOffer:  sdp, username: username)
+            if let username = dict["username"] as? String, let sdp = dict["sdp"] as? String ,let roomId = dict["roomId"] as? String {
+                print("Received offer from: \(username), sdp: \(sdp),id: \(roomId)")
+                delegate?.SocketManagerClientProtocol(self, didReceiveRemoteOffer:  sdp, username: username,roomId:roomId)
                 
                
             } else {
@@ -144,9 +144,9 @@ class SocketManagerClient: NSObject, ObservableObject {
         socket.on("audio_answer") { [weak self] (data, _) in
             guard let self = self else { return }
             guard let dict = data.first as? [String: Any] else { return }
-            if let username = dict["username"] as? String, let sdp = dict["sdp"] as? String {
+            if let username = dict["username"] as? String, let sdp = dict["sdp"] as? String, let rooomId = dict["roomId"] as? String {
                 print("Received answer from: \(username), sdp: \(sdp)")
-                delegate?.SocketManagerClientProtocol(self, didReceiveRemoteAnswer:  sdp, username: username)
+                delegate?.SocketManagerClientProtocol(self, didReceiveRemoteAnswer:  sdp, username: username,roomId: rooomId)
                
             } else {
                 print("audio_answer payload missing expected keys: \(dict)")
@@ -158,9 +158,9 @@ class SocketManagerClient: NSObject, ObservableObject {
         socket.on("audio_candidate") { [weak self] (data, _) in
             guard let self = self else { return }
             guard let dict = data.first as? [String: Any] else { return }
-            if let candidate = dict["candidate"] as? [String: Any] {
+            if let candidate = dict["candidate"] as? [String: Any],let roomId = dict["roomId"] as? String  {
                 print("Received ICE candidate: \(candidate)")
-                delegate?.SocketManagerClientProtocol(self, didReceiveRemoteICECandidate: candidate)
+                delegate?.SocketManagerClientProtocol(self, didReceiveRemoteICECandidate: candidate,roomId: roomId)
                
             } else {
                 print("audio_candidate payload missing candidate key: \(dict)")
