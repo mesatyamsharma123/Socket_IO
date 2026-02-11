@@ -32,7 +32,7 @@ class SocketManagerClient: NSObject, ObservableObject {
     }
 
     func setupConnection() {
-        let url = URL(string: "https://dcef-2401-4900-c983-7cb3-61ef-79b5-ae01-ab0.ngrok-free.app")!
+        let url = URL(string: "https://c88c-2401-4900-c983-7cb3-61ef-79b5-ae01-ab0.ngrok-free.app")!
         manager = SocketManager(socketURL: url, config: [.log(false), .compress])
         socket = manager.defaultSocket
 
@@ -119,7 +119,7 @@ class SocketManagerClient: NSObject, ObservableObject {
     func sendAnswer(sdp: String, usename: String,roomId:String) {
         print(roomId)
         
-        let message:[String: Any] = [ "username": usename,"sdp": sdp,roomId:roomId]
+        let message:[String: Any] = [ "username": usename,"sdp": sdp,"roomId":roomId]
         socket.emit("audio_answer", message)
     }
     func sendCandidate(candidate: [String: Any]) {
