@@ -50,7 +50,9 @@ struct callButtonStyle:ViewModifier {
                     .modifier(callButtonStyle())
                    
 
-                    Button { } label: {
+                    Button {
+                        viewModel.startCall(roomId: roomId)
+                    } label: {
                         Image(systemName: "phone.down.fill")
                     }
                     .modifier(callButtonStyle())
@@ -71,7 +73,7 @@ struct callButtonStyle:ViewModifier {
                 Button("Confirm", role: .cancel) {
                     viewModel.checkPermissions()
                     viewModel.startLocalAudioCapture()
-                    viewModel.startCall(roomId: roomId)
+               
              
                     
                     
