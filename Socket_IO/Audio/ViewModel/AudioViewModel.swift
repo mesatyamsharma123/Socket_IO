@@ -126,7 +126,8 @@ extension AudioViewModel: SocketManagerClientProtocol, WebRTCClientDelegate {
     func SocketManagerClientProtocol(_ client: SocketManagerClient, didReceiveRemoteAnswer: String, username: String) {
         rtc.setRemoteDiscriptionForAnswer(remoteSdp: didReceiveRemoteAnswer)
         rtc.answer { [weak self ] answer in
-            self?.socket.sendAnswer(sdp: answer, usename: username,roomId: self!.currentRoomId)
+            guard let self = self else { return }
+            self.socket.sendAnswer(sdp: answer, usename: username, roomId: currentRoomId)
         }
     }
     
