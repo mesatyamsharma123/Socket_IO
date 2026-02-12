@@ -32,8 +32,8 @@ class SocketManagerClient: NSObject, ObservableObject {
     }
 
     func setupConnection() {
-        let url = URL(string: "https://c88c-2401-4900-c983-7cb3-61ef-79b5-ae01-ab0.ngrok-free.app")!
-        manager = SocketManager(socketURL: url, config: [.log(false), .compress])
+        let url = URL(string: "https://3bc0-106-51-65-110.ngrok-free.app")!
+        manager = SocketManager(socketURL: url, config: [.log(false), .compress,.forceWebsockets(true),.reconnects(true)])
         socket = manager.defaultSocket
 
         socket.on(clientEvent: .connect) { _, _ in
@@ -48,6 +48,10 @@ class SocketManagerClient: NSObject, ObservableObject {
         listenOffer()
         listenAnswer()
         listenCandidate()
+        self.listenForEndCall { [weak self] in
+                // Ye handle karega jab doosra user call kaate
+                print("📱 End call received in SocketManager")
+            }
     }
 
     func connect() {
@@ -123,8 +127,20 @@ class SocketManagerClient: NSObject, ObservableObject {
         socket.emit("audio_answer", message)
     }
     func sendCandidate(candidate: [String: Any]) {
-        let message:[String: Any] = ["candidate": candidate]
+        // ViewModel ne jo dictionary bheji hai (candidateDict),
+        // usme pehle se 'roomId' maujood hai.
+        // Isliye humein usey extract karke top-level par bhejna chahiye
+        // agar aapka server aisa expect kar raha hai.
+        
+        let roomId = candidate["roomId"] as? String ?? ""
+        
+        let message: [String: Any] = [
+            "candidate": candidate, // Pura candidate object (sdpMid, sdpMLineIndex, etc.)
+            "roomId": roomId        // Server isse identify karega ki kaha bhejna hai
+        ]
+        
         socket.emit("audio_candidate", message)
+        print("❄️ Candidate emitted to room: \(roomId)")
     }
     
     func listenOffer() {
@@ -176,5 +192,17 @@ class SocketManagerClient: NSObject, ObservableObject {
                print("connect with server")
                
            }
+    }
+    func endCall(roomId: String) {
+        let message: [String: Any] = ["roomId": roomId, "username": currentUserName]
+        socket.emit("end_call", message)
+    }
+
+    // listenEndCall function ko setupConnection() mein add karein
+    func listenForEndCall(completion: @escaping () -> Void) {
+        socket.on("end_call") { data, _ in
+            print("📞 Received end_call from server")
+            completion()
+        }
     }
 }

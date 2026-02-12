@@ -23,13 +23,16 @@ struct callButtonStyle:ViewModifier {
     struct AudioChatView: View {
             @Binding var roomId: String
             @ObservedObject var socketManager: SocketManagerClient
+            @Binding var selectedTab: Int
             
             @StateObject var viewModel: AudioViewModel
             @State private var isBool: Bool = false
-        
-        init(roomId: Binding<String>, socketManager: SocketManagerClient) {
+            @Environment(\.dismiss) private var dismiss
+     
+        init(roomId: Binding<String>, socketManager: SocketManagerClient,selectedTab: Binding<Int>) {
                 self._roomId = roomId
                 self.socketManager = socketManager
+            self._selectedTab = selectedTab
                 // Purane socketManager ko naye ViewModel mein pass kiya
                 self._viewModel = StateObject(wrappedValue: AudioViewModel(socketManager: socketManager))
             }
@@ -44,48 +47,76 @@ struct callButtonStyle:ViewModifier {
             }
             .overlay(
                 HStack(spacing: 30) {
-                    Button { } label: {
-                        Image(systemName: "mic.fill")
-                    }
-                    .modifier(callButtonStyle())
+                    Button {
+                            viewModel.toggleMute()
+                        } label: {
+                            Image(systemName: viewModel.isMuted ? "mic.slash.fill" : "mic.fill")
+                                .foregroundColor(viewModel.isMuted ? .red : .white)
+                        }
+                        .modifier(callButtonStyle())
                    
 
                     Button {
-                        viewModel.startCall(roomId: roomId)
-                    } label: {
-                        Image(systemName: "phone.down.fill")
-                    }
-                    .modifier(callButtonStyle())
-
-                    Button { } label: {
-                        Image(systemName: "speaker.fill")
-                    }
-                    .modifier(callButtonStyle())
+                        if !viewModel.isCallActive {
+                                    
+                                            viewModel.startCall(roomId: roomId)
+                            viewModel.isCallActive = true
+                                        } else {
+                                          
+                                            viewModel.hangup()
+                                            
+                                        }
+                                    } label: {
+                                        Image(systemName: viewModel.isCallActive ? "phone.down.fill" : "phone.fill")
+                                            .font(.system(size: 30))
+                                            .padding(20)
+                                            .background(viewModel.isCallActive ? Color.red : Color.green)
+                                            .clipShape(Circle())
+                                            .foregroundColor(.white)
+                                    }
+                    Button {
+                            viewModel.toggleSpeaker()
+                        } label: {
+                            Image(systemName: viewModel.isSpeakerOn ? "speaker.wave.3.fill" : "speaker.fill")
+                                .foregroundColor(viewModel.isSpeakerOn ? .blue : .white)
+                        }
+                        .modifier(callButtonStyle())
+                    
                 }
                 .padding(.bottom, 40),
                 alignment: .bottom
             )
             .onAppear {
-                isBool.toggle()
-              
-               
+                isBool = true
+                socketManager.joinRoom(id: roomId)
+                
+            
+                socketManager.listenForEndCall {
+                    DispatchQueue.main.async {
+                        viewModel.isCallActive = false
+                        // Connection bhi clean kar dein bina socket emit kiye
+                        viewModel.hangup()
+                        print("✅ UI Reset because other user ended call")
+                    }
+                }
             }
             .alert("Do you want to switch to Audio Call?", isPresented: $isBool) {
                 Button("Confirm", role: .cancel) {
                     viewModel.checkPermissions()
                     viewModel.startLocalAudioCapture()
+                   
 
-             
-                    
-                    
-                    
-                    
-                    
                 }
-                Button("Cancel", role: .destructive) {}
+                Button("Cancel", role: .destructive) {
+                    viewModel.hangup()
+                    selectedTab = 0
+                }
             }
-        }
+            .onDisappear {
+                print("👋 Cleaning up...")
+                viewModel.hangup()
+                viewModel.isCallActive = false // State reset for next time
+                isBool = false       // Alert state reset
+            }        }
     }
-
-
 

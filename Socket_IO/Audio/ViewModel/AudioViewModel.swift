@@ -19,6 +19,14 @@ class AudioViewModel: ObservableObject {
     private var currentRoomId: String = ""
     
     @Published var remoteAudioTrack: RTCAudioTrack?
+    
+    
+    @Published var connectionState: String = "Connecting..."
+    @Published var isMuted: Bool = false
+    @Published var isSpeakerOn: Bool = true
+    @Published var isCallActive: Bool = false
+    
+    
     init(socketManager: SocketManagerClient){
         self.socket = socketManager
         self.rtc = WebRTCManager()
@@ -46,21 +54,55 @@ class AudioViewModel: ObservableObject {
     func startLocalAudioCapture(){
         rtc.startAudioOnly()
     }
-    func startCall(roomId: String){
+    func startCall(roomId: String) {
         self.currentRoomId = roomId
         
-        // Yahan hum dobara ensure kar rahe hain ki audio capture chalu hai
+      
         self.startLocalAudioCapture()
         
-        // 0.2 ya 0.3 second ka delay WebRTC ko track process karne ka waqt deta hai
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+    
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             self.rtc.offer { [weak self] (sdp) in
                 guard let self = self else { return }
                 self.socket.sendOffer(sdp: sdp, usename: "user1", roomId: roomId)
             }
         }
-        print(" Offer sent after ensuring track is attached")
     }
+
+    func toggleMute() {
+        isMuted.toggle()
+        // WebRTCManager ke pas local audio track ka access hona chahiye
+        // Agar rtc.localAudioTrack public hai toh:
+        rtc.localAudioTrack?.isEnabled = !isMuted
+        print(isMuted ? "🔇 Mic Muted" : "🎙️ Mic Unmuted")
+    }
+    func toggleSpeaker() {
+        isSpeakerOn.toggle()
+        let session = RTCAudioSession.sharedInstance()
+        session.lockForConfiguration()
+        do {
+            // .speaker means loudspeaker, .none/default means earpiece
+            try session.overrideOutputAudioPort(isSpeakerOn ? .speaker : .none)
+            print("🔊 Speaker is now \(isSpeakerOn ? "ON" : "OFF (Earpiece)")")
+        } catch {
+            print("❌ Error toggling speaker: \(error)")
+        }
+        session.unlockForConfiguration()
+    }
+    
+    func hangup() {
+        guard !currentRoomId.isEmpty else { return }
+        rtc.closeConnection()
+        socket.endCall(roomId: currentRoomId)
+        
+        DispatchQueue.main.async {
+            self.isCallActive = false // Reset state inside VM
+            self.remoteAudioTrack = nil
+        }
+    }
+
+
+
     func checkPermissions() {
         let audioStatus = AVCaptureDevice.authorizationStatus(for: .audio)
         
@@ -94,13 +136,21 @@ class AudioViewModel: ObservableObject {
 
 extension AudioViewModel: SocketManagerClientProtocol, WebRTCClientDelegate {
     func SocketManagerClientProtocol(_ client: SocketManagerClient, didReceiveRemoteOffer: String, username: String, roomId: String) {
-        rtc.setRemoteDiscriptionForOffer(remoteSdp: didReceiveRemoteOffer)
-        rtc.answer { [weak self ] answer in
-            guard let self else {return}
-            self.socket.sendAnswer(sdp: answer, usename: username,roomId: roomId)
-            
+        self.currentRoomId = roomId
+        DispatchQueue.main.async {
+                self.isCallActive = true // Phone Icon automatic Red (Down) ho jayega
+            }
+  
+        self.startLocalAudioCapture()
+        
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.rtc.setRemoteDiscriptionForOffer(remoteSdp: didReceiveRemoteOffer)
+            self.rtc.answer { [weak self] answer in
+                guard let self = self else { return }
+                self.socket.sendAnswer(sdp: answer, usename: "user2", roomId: roomId)
+            }
         }
-    
     }
     
     func SocketManagerClientProtocol(_ client: SocketManagerClient, didReceiveRemoteAnswer: String, username: String, roomId: String) {
@@ -123,6 +173,8 @@ extension AudioViewModel: SocketManagerClientProtocol, WebRTCClientDelegate {
     
 
     
+
+    
     func webRTCClient(_ client: WebRTCManager, didDiscoverLocalCandidate candidate: RTCIceCandidate) {
         let candidateDict: [String: Any] = [
             "candidate": candidate.sdp,
@@ -135,7 +187,14 @@ extension AudioViewModel: SocketManagerClientProtocol, WebRTCClientDelegate {
     }
     
     func webRTCClient(_ client: WebRTCManager, didChangeConnectionState state: RTCIceConnectionState) {
-        print(state)
+        DispatchQueue.main.async {
+            switch state {
+            case .connected: self.connectionState = "Connected"
+            case .failed: self.connectionState = "Failed"
+            case .disconnected: self.connectionState = "Disconnected"
+            default: break
+            }
+        }
     }
     
     func webRTCClient(_ client: WebRTCManager, didReceiveRemoteAudioTrack track: RTCAudioTrack) {
@@ -161,15 +220,6 @@ extension AudioViewModel: SocketManagerClientProtocol, WebRTCClientDelegate {
         
     }
     
-    func SocketManagerClientProtocol(_ client: SocketManagerClient, didReceiveRemoteAnswer: String, username: String) {
-        
-    }
-    
-    func SocketManagerClientProtocol(_ client: SocketManagerClient, didReceiveRemoteICECandidate candidate: [String : Any]) {
-        guard let sdp = candidate["candidate"] as? String,
-              let sdpMid = candidate["sdpMid"] as? String,
-              let sdpMLineIndex = candidate["sdpMLineIndex"] as? Int32 else { return }
-        let iceCandidate = RTCIceCandidate(sdp: sdp, sdpMLineIndex: sdpMLineIndex, sdpMid: sdpMid)
-        rtc.set(remoteCandidate: iceCandidate)
-    }
+  
+ 
 }

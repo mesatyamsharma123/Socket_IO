@@ -25,6 +25,7 @@ class WebRTCManager: NSObject, ObservableObject{
     private let mediaConstrains = [kRTCMediaConstraintsOfferToReceiveAudio: kRTCMediaConstraintsValueTrue,
                                    kRTCMediaConstraintsOfferToReceiveVideo: kRTCMediaConstraintsValueTrue]
     private var remoteCandidatesQueue: [RTCIceCandidate] = []
+    var localAudioTrack: RTCAudioTrack?
 
     
    override init() {
@@ -41,14 +42,21 @@ class WebRTCManager: NSObject, ObservableObject{
        setupConfiguration()
     }
     
-    func  setupConfiguration(){
+    func setupConfiguration() {
+        // Purani connection agar hai toh cleanup karein
+        if peerConnection != nil {
+            peerConnection.close()
+        }
+        
         let config = RTCConfiguration()
         config.iceServers = [RTCIceServer(urlStrings: ["stun:stun.l.google.com:19302"])]
         config.sdpSemantics = .unifiedPlan
         
         let constraints = RTCMediaConstraints(mandatoryConstraints: mediaConstrains, optionalConstraints: nil)
         
+        // Naya object assign karein
         self.peerConnection = factory.peerConnection(with: config, constraints: constraints, delegate: self)
+        print("✅ New PeerConnection Created")
     }
     func startAudioOnly() {
  
@@ -68,6 +76,7 @@ class WebRTCManager: NSObject, ObservableObject{
 
         
         let audioTrack = factory.audioTrack(with: audioSource, trackId: "audio0")
+        self.localAudioTrack = audioTrack
         
 
         peerConnection.add(audioTrack, streamIds: ["stream0"])
@@ -76,9 +85,18 @@ class WebRTCManager: NSObject, ObservableObject{
     }
     
     func offer(completion: @escaping (String) -> Void) {
+        // Agar connection close ho chuki hai, toh dobara setup karein
+        if peerConnection.signalingState == .closed {
+            setupConfiguration()
+            startAudioOnly() // Tracks dobara add karein
+        }
+
         let constraints = RTCMediaConstraints(mandatoryConstraints: mediaConstrains, optionalConstraints: nil)
         peerConnection.offer(for: constraints) { [weak self] (sdp, error) in
-            guard let self = self, let sdp = sdp else { return }
+            guard let self = self, let sdp = sdp else {
+                print("❌ Offer Error: \(error?.localizedDescription ?? "Unknown")")
+                return
+            }
             self.peerConnection.setLocalDescription(sdp) { _ in
                 completion(sdp.sdp)
             }
@@ -107,7 +125,7 @@ class WebRTCManager: NSObject, ObservableObject{
             let sdp = RTCSessionDescription(type: .answer, sdp: remoteSdp)
             peerConnection.setRemoteDescription(sdp) { [weak self] error in
                 if error == nil {
-                    self?.drainRemoteCandidatesQueue() // Queue clear karein
+                    self?.drainRemoteCandidatesQueue()
                 }
             }
         }
@@ -131,6 +149,26 @@ class WebRTCManager: NSObject, ObservableObject{
             print("✅ Drained \(remoteCandidatesQueue.count) queued candidates")
             remoteCandidatesQueue.removeAll()
         }
+    func closeConnection() {
+        // 1. Tracks hatao
+        peerConnection.senders.forEach { peerConnection.removeTrack($0) }
+        
+        // 2. Connection close karo
+        peerConnection.close()
+        
+        // 3. Audio Session cleanup
+        let rtcSession = RTCAudioSession.sharedInstance()
+        rtcSession.lockForConfiguration()
+        try? rtcSession.setActive(false)
+        rtcSession.unlockForConfiguration()
+
+        // 4. 🔥 CRITICAL: Naya object banane se pehle ensure karein queue clear ho
+        remoteCandidatesQueue.removeAll()
+        
+        // 5. Naya connection setup karein for next call
+        setupConfiguration()
+        print("🔄 WebRTC Reset: Ready for next call")
+    }
     
     
     
